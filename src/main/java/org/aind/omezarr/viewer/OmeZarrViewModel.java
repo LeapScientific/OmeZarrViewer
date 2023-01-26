@@ -7,12 +7,15 @@ import javafx.scene.image.WritableImage;
 import org.aind.omezarr.OmeZarrDataset;
 import org.aind.omezarr.OmeZarrGroup;
 import org.aind.omezarr.image.OmeZarrImage;
+import org.aind.omezarr.image.OmeZarrImageStack;
 import org.aind.omezarr.image.TCZYXRasterZStack;
+import ucar.ma2.InvalidRangeException;
 
 import java.awt.*;
 import java.awt.color.ColorSpace;
 import java.awt.image.*;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -110,15 +113,14 @@ public class OmeZarrViewModel {
 
                     int zIndex = imageSliceViewModel.zIndexProperty.get();
 
-                    System.out.println(String.format("zIndex for dataset %s load: %d", dataset.getPath(), zIndex));
-
                     var start = Instant.now();
 
+                    // loadSingleImage(dataset, zIndex);
 
-                    OmeZarrImage omeZarrImage = new OmeZarrImage(dataset, imageSliceViewModel.timeIndexProperty.get(), imageSliceViewModel.channelIndexProperty.get(), zIndex);
+                    // loadMultireadImageStack(dataset, zIndex);
 
-                    currentImage = omeZarrImage.asImage(true);
-                    
+                    loadAsStack(dataset, zIndex);
+
                     loadDuration = Duration.between(start, Instant.now());
                 } else {
                     loadDuration = null;
@@ -145,5 +147,56 @@ public class OmeZarrViewModel {
                 System.out.println(ex.getMessage());
             }
         }).start();
+    }
+
+    private void loadSingleImage(OmeZarrDataset dataset, int zIndex) throws IOException, InvalidRangeException {
+        OmeZarrImage omeZarrImage = new OmeZarrImage(dataset, imageSliceViewModel.timeIndexProperty.get(), imageSliceViewModel.channelIndexProperty.get(), zIndex);
+
+        currentImage = omeZarrImage.asImage(true);
+    }
+
+    private void loadMultireadImageStack(OmeZarrDataset dataset, int zIndex) throws IOException, InvalidRangeException {
+        OmeZarrImageStack stack = new OmeZarrImageStack(dataset);
+
+        int[] offset = {0, 0, 0, 0, 0};
+
+        var slices = stack.asSlices(dataset.getShape(), offset, true);
+
+        currentImage = new BufferedImage(colorModel, slices[zIndex], colorModel.isAlphaPremultiplied(), null);
+    }
+
+    private final boolean loadSubset = false;
+
+    private void loadAsStack(OmeZarrDataset dataset, int zIndex) throws IOException {
+        if (loadSubset) {
+            loadAsStackSubset(dataset, zIndex);
+
+            return;
+        }
+
+        int[] fullSize = dataset.getShape();
+
+        int[] shape = {1, 1, fullSize[2], fullSize[3], fullSize[4]};
+        int[] offset = {0, 0, 0, 0, 0};
+
+        var slices = TCZYXRasterZStack.fromDataset(dataset, shape, offset, true, null, false);
+
+        currentImage = new BufferedImage(colorModel, slices[zIndex], colorModel.isAlphaPremultiplied(), null);
+    }
+
+    private final int subsetCount = 1;
+
+    private void loadAsStackSubset(OmeZarrDataset dataset, int zIndex) throws IOException {
+        int[] fullSize = dataset.getShape();
+
+        int subset = Math.min(fullSize[2], subsetCount);
+        int subsetOffset = Math.max(0, (subset - 1) / 2);
+
+        int[] shape = {1, 1, subset, fullSize[3], fullSize[4]};
+        int[] offset = {0, 0, Math.max(0, zIndex - subsetOffset), 0, 0};
+
+        var slices = TCZYXRasterZStack.fromDataset(dataset, shape, offset, true, null, false);
+
+        currentImage = new BufferedImage(colorModel, slices[subsetOffset], colorModel.isAlphaPremultiplied(), null);
     }
 }

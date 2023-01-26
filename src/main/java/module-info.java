@@ -5,5 +5,6 @@ module org.aind.omezarr.viewer {
     requires java.prefs;
     requires java.desktop;
     requires javafx.graphics;
+    requires cdm.core;
     exports org.aind.omezarr.viewer;
 }
