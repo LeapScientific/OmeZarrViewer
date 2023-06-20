@@ -4,6 +4,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.Slider;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
@@ -46,14 +47,19 @@ public class ViewerPane extends BorderPane {
         datasetLabel.textProperty().bind(viewModel.getOmeZarrViewModel().get().imageSliceViewModel.datasetIndexProperty.asString());
 
         var datasetSlider = new Slider();
-        datasetSlider.setMin(2);
-        datasetSlider.setMax(14);
+        datasetSlider.setShowTickLabels(true);
+        datasetSlider.setShowTickMarks(true);
+        datasetSlider.minProperty().bind(viewModel.getOmeZarrViewModel().get().minDatasetIndexProperty);
+        datasetSlider.maxProperty().bind(viewModel.getOmeZarrViewModel().get().maxDatasetIndexProperty);;
         datasetSlider.valueProperty().bindBidirectional(viewModel.getOmeZarrViewModel().get().imageSliceViewModel.datasetIndexProperty);
 
         var loadDurationLabel = new Label();
         loadDurationLabel.textProperty().bind(viewModel.getOmeZarrViewModel().get().lastLoadDurationProperty);
 
-        var controlsHeader = new HBox(datasetLabel, datasetSlider, loadDurationLabel);
+        var loadProgressIndicator = new ProgressIndicator();
+        loadProgressIndicator.visibleProperty().bind(viewModel.getOmeZarrViewModel().get().isLoadingProperty);
+
+        var controlsHeader = new HBox(datasetLabel, datasetSlider, loadDurationLabel, loadProgressIndicator);
 
         var header = new VBox(buttonHeader, controlsHeader);
 

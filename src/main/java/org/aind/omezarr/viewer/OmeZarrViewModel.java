@@ -22,6 +22,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.TemporalUnit;
 
 public class OmeZarrViewModel {
     public final StringProperty filesetLocation = new SimpleStringProperty("Select an Ome-Zarr fileset");
@@ -31,6 +32,10 @@ public class OmeZarrViewModel {
     public final ImageSliceViewModel imageSliceViewModel = new ImageSliceViewModel();
 
     public final BooleanProperty isLoadingProperty = new SimpleBooleanProperty(false);
+
+    public final IntegerProperty minDatasetIndexProperty = new SimpleIntegerProperty(0);
+
+    public final IntegerProperty maxDatasetIndexProperty = new SimpleIntegerProperty(1);
 
     public final StringProperty lastLoadDurationProperty = new SimpleStringProperty("---");
 
@@ -86,6 +91,33 @@ public class OmeZarrViewModel {
 
             filesetLocation.setValue(path.toString());
 
+            int datasetCount = fileset.getAttributes().getMultiscales()[0].getDatasets().size();
+
+            int min = Integer.MAX_VALUE;
+            int max = Integer.MIN_VALUE;
+
+            for (int idx = datasetCount - 1; idx >= 0; idx--) {
+                try {
+                    OmeZarrDataset dataset = fileset.getAttributes().getMultiscales()[0].getDatasets().get(idx);
+
+                    if (!dataset.isValid()) {
+                        continue;
+                    }
+
+                    if (idx < min) {
+                        min = idx;
+                    }
+
+                    if (idx > max){
+                        max = idx;
+                    }
+                }catch (Exception ex) {
+                }
+            }
+
+            maxDatasetIndexProperty.set(max);
+            minDatasetIndexProperty.set(min);
+
             var dataIndex = fileset.getAttributes().getMultiscales()[0].getDatasets().size() - 1;
 
             imageSliceViewModel.datasetIndexProperty.set(dataIndex);
@@ -133,10 +165,12 @@ public class OmeZarrViewModel {
                     }
 
                     if (loadDuration != null) {
-                        lastLoadDurationProperty.set(loadDuration.toString());
+                        lastLoadDurationProperty.set(String.format("%d.%d", loadDuration.toSecondsPart(), loadDuration.toMillisPart()));
                     } else {
                         lastLoadDurationProperty.set("failed");
                     }
+
+                    System.gc();
                 });
             } catch (Exception ex) {
                 imageProperty.setValue(null);
@@ -147,9 +181,13 @@ public class OmeZarrViewModel {
     }
 
     private void loadSingleImage(OmeZarrDataset dataset, int zIndex) throws IOException, InvalidRangeException {
+        var start = Instant.now();
+
         OmeZarrImage omeZarrImage = new OmeZarrImage(dataset, imageSliceViewModel.timeIndexProperty.get(), imageSliceViewModel.channelIndexProperty.get(), zIndex);
 
         currentImage = omeZarrImage.asImage(true);
+
+        loadDuration = Duration.between(start, Instant.now());
     }
 
     private void loadMultireadImageStack(OmeZarrDataset dataset, int zIndex) throws IOException, InvalidRangeException {
@@ -176,25 +214,27 @@ public class OmeZarrViewModel {
         int[] shape = {1, 1, fullSize[2], fullSize[3], fullSize[4]};
         int[] offset = {0, 0, 0, 0, 0};
 
-        if (shape[2] > 213) {
-            shape[2] = 213;
+        if (shape[2] > 512) {
+            shape[2] = 512;
 
-            if (zIndex >= 213) {
-                zIndex = 212;
+            if (zIndex >= 512) {
+                zIndex = 511;
             }
         }
-        if (shape[3] > 175) {
-            shape[3] = 175;
+
+        if (shape[3] > 512) {
+            shape[3] = 512;
         }
-        if (shape[4] > 408) {
-            shape[4] = 408;
+
+        if (shape[4] > 512) {
+            shape[4] = 512;
         }
 
         var metrics = new PerformanceMetrics();
 
         var start = Instant.now();
 
-        var slices = TCZYXRasterZStack.fromDataset(dataset, shape, offset, false, true, null, metrics);
+        var slices = TCZYXRasterZStack.fromDataset(dataset, shape, offset, 1, false, null, metrics);
 
         loadDuration = Duration.between(start, Instant.now());
 
@@ -214,7 +254,7 @@ public class OmeZarrViewModel {
 
         var metrics = new PerformanceMetrics();
 
-        var slices = TCZYXRasterZStack.fromDataset(dataset, shape, offset, false, true, null, metrics);
+        var slices = TCZYXRasterZStack.fromDataset(dataset, shape, offset, 4, true, null, metrics);
 
         currentImage = new BufferedImage(colorModel, slices[subsetOffset], colorModel.isAlphaPremultiplied(), null);
     }
