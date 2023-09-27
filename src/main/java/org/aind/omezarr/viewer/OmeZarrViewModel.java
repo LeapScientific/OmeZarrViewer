@@ -50,11 +50,11 @@ public class OmeZarrViewModel {
     public OmeZarrViewModel() {
         imageSliceViewModel.datasetIndexProperty.addListener((o, p, n) -> {
             try {
-                var prevDatasetShape = fileset.getAttributes().getMultiscales()[0].getDatasets().get(p.intValue()).getShape();
+                var prevDatasetShape = fileset.getAttributes().getMultiscales()[0].getDatasets().get(p.intValue()).getRawShape();
 
-                var newDatasetShape = fileset.getAttributes().getMultiscales()[0].getDatasets().get(n.intValue()).getShape();
+                int[] newDatasetShape = fileset.getAttributes().getMultiscales()[0].getDatasets().get(n.intValue()).getRawShape();
 
-                if (prevDatasetShape[2] == 1) {
+                if (prevDatasetShape[2] == 1 || imageSliceViewModel.zIndexProperty.get() == 0) {
                     imageSliceViewModel.zIndexProperty.set((int) (newDatasetShape[2] / 2.0));
                 } else {
                     double percent = (1.0 * imageSliceViewModel.zIndexProperty.get() / prevDatasetShape[2]);
@@ -108,10 +108,10 @@ public class OmeZarrViewModel {
                         min = idx;
                     }
 
-                    if (idx > max){
+                    if (idx > max) {
                         max = idx;
                     }
-                }catch (Exception ex) {
+                } catch (Exception ex) {
                 }
             }
 
@@ -195,7 +195,7 @@ public class OmeZarrViewModel {
 
         int[] offset = {0, 0, 0, 0, 0};
 
-        var slices = stack.asSlices(dataset.getShape(), offset, true);
+        var slices = stack.asSlices(dataset.getRawShape(), offset, true);
 
         currentImage = new BufferedImage(colorModel, slices[zIndex], colorModel.isAlphaPremultiplied(), null);
     }
@@ -209,7 +209,7 @@ public class OmeZarrViewModel {
             return;
         }
 
-        int[] fullSize = dataset.getShape();
+        int[] fullSize = dataset.getRawShape();
 
         int[] shape = {1, 1, fullSize[2], fullSize[3], fullSize[4]};
         int[] offset = {0, 0, 0, 0, 0};
@@ -234,7 +234,7 @@ public class OmeZarrViewModel {
 
         var start = Instant.now();
 
-        var slices = TCZYXRasterZStack.fromDataset(dataset, shape, offset, 1, false, null, metrics);
+        var slices = TCZYXRasterZStack.fromDataset(dataset, shape, offset, 1, true, null, metrics);
 
         loadDuration = Duration.between(start, Instant.now());
 
@@ -244,7 +244,7 @@ public class OmeZarrViewModel {
     private final int subsetCount = 1;
 
     private void loadAsStackSubset(OmeZarrDataset dataset, int zIndex) throws IOException {
-        int[] fullSize = dataset.getShape();
+        int[] fullSize = dataset.getRawShape();
 
         int subset = Math.min(fullSize[2], subsetCount);
         int subsetOffset = Math.max(0, (subset - 1) / 2);

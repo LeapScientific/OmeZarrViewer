@@ -1,0 +1,15 @@
+.button {
+    -fx-background-color: #347785;
+    -fx-text-fill: white;
+}
+
+.menu-button {
+    -fx-background-color: #347785;
+    -fx-text-fill: white;
+    -fx-font-size: 18;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 8px;
+}
+.menu-button:selected {
+    -fx-background-color: #847785;
+}

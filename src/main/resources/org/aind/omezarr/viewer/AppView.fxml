@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane fx:id="appContent" prefHeight="800.0" prefWidth="1200.0" stylesheets="@style.css"
+            xmlns="http://javafx.com/javafx/17.0.2-ea"
+            xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.aind.omezarr.viewer.AppViewController">
+    <top>
+        <HBox prefWidth="Infinity" style="-fx-background-color: #003057;" BorderPane.alignment="CENTER">
+            <padding>
+                <Insets bottom="8.0" left="8.0" right="8.0" top="8.0"/>
+            </padding>
+            <Label alignment="BOTTOM_LEFT" style="-fx-text-fill: #ffffff; -fx-font-size: 20" text="OME-ZARR Viewer"/>
+            <HBox HBox.hgrow="ALWAYS" alignment="CENTER_RIGHT">
+                <Label text="Current Data: " style="-fx-text-fill: #ffffff; -fx-font-size: 14; -fx-font-weight: bold;"/>
+                <Label fx:id="selectedDataPathLabel" style="-fx-text-fill: #ffffff; -fx-font-size: 14;">
+                    <HBox.margin>
+                        <Insets right="16.0"/>
+                    </HBox.margin>
+                </Label>
+                <Button text="Select Data..." onAction="#onSelectDataClicked"/>
+            </HBox>
+        </HBox>
+    </top>
+    <left>
+        <VBox prefWidth="160" style="-fx-background-color: #347785;">
+            <ToggleButton fx:id="explorerMenuButton" text="Explorer" maxWidth="Infinity" styleClass="menu-button"
+                          onAction="#onExplorerMenuClicked"/>
+            <ToggleButton fx:id="viewerMenuButton" text="Slice Viewer" maxWidth="Infinity" styleClass="menu-button"
+                          onAction="#onViewerMenuClicked"/>
+            <ToggleButton fx:id="exportMenuButton" text="Export" maxWidth="Infinity" styleClass="menu-button"
+                          onAction="#onExportMenuClicked"/>
+        </VBox>
+    </left>
+    <bottom>
+        <HBox style="-fx-background-color: #003057;">
+            <padding>
+                <Insets bottom="8.0" left="8.0" right="8.0" top="8.0"/>
+            </padding>
+            <HBox HBox.hgrow="ALWAYS">
+                <Label text="Java Version: " style="-fx-text-fill: #ffffff;"/>
+                <Label fx:id="javaVersionLabel" style="-fx-text-fill: #ffffff;"/>
+            </HBox>
+            <HBox alignment="BASELINE_RIGHT" HBox.hgrow="ALWAYS" style="-fx-text-fill: #ffffff;">
+                <Label text="Java FX Version: " style="-fx-text-fill: #ffffff;"/>
+                <Label fx:id="javaFxVersionLabel" style="-fx-text-fill: #ffffff;"/>
+            </HBox>
+        </HBox>
+    </bottom>
+    <center>
+    </center>
+</BorderPane>
