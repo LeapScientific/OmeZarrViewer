@@ -6,6 +6,7 @@ import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.WritableImage;
 import org.aind.omezarr.OmeZarrDataset;
 import org.aind.omezarr.OmeZarrGroup;
+import org.aind.omezarr.OmeZarrIndex;
 import org.aind.omezarr.image.OmeZarrImage;
 import org.aind.omezarr.image.OmeZarrImageStack;
 import org.aind.omezarr.image.TCZYXRasterZStack;
@@ -37,6 +38,10 @@ public class OmeZarrViewModel {
 
     public final IntegerProperty maxDatasetIndexProperty = new SimpleIntegerProperty(1);
 
+    public final IntegerProperty minChannelIndexProperty = new SimpleIntegerProperty(0);
+
+    public final IntegerProperty maxChannelIndexProperty = new SimpleIntegerProperty(0);
+
     public final StringProperty lastLoadDurationProperty = new SimpleStringProperty("---");
 
     private OmeZarrGroup fileset;
@@ -62,6 +67,14 @@ public class OmeZarrViewModel {
                     imageSliceViewModel.zIndexProperty.set((int) (newDatasetShape[2] * percent));
                 }
 
+                updateCurrentSlice();
+            } catch (Exception ex) {
+
+            }
+        });
+
+        imageSliceViewModel.channelIndexProperty.addListener((o, p, n) -> {
+            try {
                 updateCurrentSlice();
             } catch (Exception ex) {
 
@@ -142,6 +155,10 @@ public class OmeZarrViewModel {
             try {
                 OmeZarrDataset dataset = fileset.getAttributes().getMultiscales()[0].getDatasets().get(imageSliceViewModel.datasetIndexProperty.get());
 
+                OmeZarrIndex shapeIndex = dataset.getShapeIndex();
+
+                int c = shapeIndex.getC();
+
                 if (dataset.isValid()) {
 
                     int zIndex = imageSliceViewModel.zIndexProperty.get();
@@ -159,7 +176,9 @@ public class OmeZarrViewModel {
 
                 Platform.runLater(() -> {
                     if (currentImage != null) {
+                        minChannelIndexProperty.set(0);
                         imageProperty.setValue(SwingFXUtils.toFXImage(currentImage, null));
+                        maxChannelIndexProperty.set(Math.max(c - 1, 0));
                     } else {
                         imageProperty.setValue(null);
                     }
@@ -193,7 +212,7 @@ public class OmeZarrViewModel {
     private void loadMultireadImageStack(OmeZarrDataset dataset, int zIndex) throws IOException, InvalidRangeException {
         OmeZarrImageStack stack = new OmeZarrImageStack(dataset);
 
-        int[] offset = {0, 0, 0, 0, 0};
+        int[] offset = {imageSliceViewModel.timeIndexProperty.get(), imageSliceViewModel.channelIndexProperty.get(), 0, 0, 0};
 
         var slices = stack.asSlices(dataset.getRawShape(), offset, true);
 
@@ -212,7 +231,7 @@ public class OmeZarrViewModel {
         int[] fullSize = dataset.getRawShape();
 
         int[] shape = {1, 1, fullSize[2], fullSize[3], fullSize[4]};
-        int[] offset = {0, 0, 0, 0, 0};
+        int[] offset = {imageSliceViewModel.timeIndexProperty.get(), imageSliceViewModel.channelIndexProperty.get(), 0, 0, 0};
 
         if (shape[2] > 512) {
             shape[2] = 512;
