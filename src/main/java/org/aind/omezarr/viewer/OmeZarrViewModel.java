@@ -4,9 +4,7 @@ import javafx.application.Platform;
 import javafx.beans.property.*;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.WritableImage;
-import org.aind.omezarr.OmeZarrDataset;
-import org.aind.omezarr.OmeZarrGroup;
-import org.aind.omezarr.OmeZarrIndex;
+import org.aind.omezarr.*;
 import org.aind.omezarr.image.OmeZarrImage;
 import org.aind.omezarr.image.OmeZarrImageStack;
 import org.aind.omezarr.image.TCZYXRasterZStack;
@@ -23,7 +21,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.TemporalUnit;
 
 public class OmeZarrViewModel {
     public final StringProperty filesetLocation = new SimpleStringProperty("Select an Ome-Zarr fileset");
@@ -55,9 +52,9 @@ public class OmeZarrViewModel {
     public OmeZarrViewModel() {
         imageSliceViewModel.datasetIndexProperty.addListener((o, p, n) -> {
             try {
-                var prevDatasetShape = fileset.getAttributes().getMultiscales()[0].getDatasets().get(p.intValue()).getRawShape();
+                var prevDatasetShape = fileset.getDataset(p.intValue()).getRawShape();
 
-                int[] newDatasetShape = fileset.getAttributes().getMultiscales()[0].getDatasets().get(n.intValue()).getRawShape();
+                int[] newDatasetShape = fileset.getDataset(n.intValue()).getRawShape();
 
                 if (prevDatasetShape[2] == 1 || imageSliceViewModel.zIndexProperty.get() == 0) {
                     imageSliceViewModel.zIndexProperty.set((int) (newDatasetShape[2] / 2.0));
@@ -100,18 +97,18 @@ public class OmeZarrViewModel {
         try {
             isLoadingProperty.set(true);
 
-            fileset = OmeZarrGroup.open(path);
+            fileset = OmeZarrGroupFactory.open(path);
 
             filesetLocation.setValue(path.toString());
 
-            int datasetCount = fileset.getAttributes().getMultiscales()[0].getDatasets().size();
+            int datasetCount = fileset.getDatasetCount();
 
             int min = Integer.MAX_VALUE;
             int max = Integer.MIN_VALUE;
 
             for (int idx = datasetCount - 1; idx >= 0; idx--) {
                 try {
-                    OmeZarrDataset dataset = fileset.getAttributes().getMultiscales()[0].getDatasets().get(idx);
+                    OmeZarrDatasetBase dataset = fileset.getDataset(idx);
 
                     if (!dataset.isValid()) {
                         continue;
@@ -131,7 +128,7 @@ public class OmeZarrViewModel {
             maxDatasetIndexProperty.set(max);
             minDatasetIndexProperty.set(min);
 
-            var dataIndex = fileset.getAttributes().getMultiscales()[0].getDatasets().size() - 1;
+            var dataIndex = fileset.getDatasetCount() - 1;
 
             imageSliceViewModel.datasetIndexProperty.set(dataIndex);
 
@@ -153,7 +150,7 @@ public class OmeZarrViewModel {
 
         new Thread(() -> {
             try {
-                OmeZarrDataset dataset = fileset.getAttributes().getMultiscales()[0].getDatasets().get(imageSliceViewModel.datasetIndexProperty.get());
+                OmeZarrDataset dataset = fileset.getDataset(imageSliceViewModel.datasetIndexProperty.get());
 
                 OmeZarrIndex shapeIndex = dataset.getShapeIndex();
 
@@ -229,24 +226,25 @@ public class OmeZarrViewModel {
         }
 
         int[] fullSize = dataset.getRawShape();
+        int[] chunkSize = dataset.getRawChunks();
 
-        int[] shape = {1, 1, fullSize[2], fullSize[3], fullSize[4]};
+        int[] shape = {1, 1, chunkSize[2], chunkSize[3], chunkSize[4]};
         int[] offset = {imageSliceViewModel.timeIndexProperty.get(), imageSliceViewModel.channelIndexProperty.get(), 0, 0, 0};
 
-        if (shape[2] > 512) {
-            shape[2] = 512;
-
-            if (zIndex >= 512) {
-                zIndex = 511;
-            }
+        if (shape[2] > fullSize[2]) {
+            shape[2] = fullSize[2];
         }
 
-        if (shape[3] > 512) {
-            shape[3] = 512;
+        if (zIndex >= shape[2]) {
+            zIndex = shape[2] - 1;
         }
 
-        if (shape[4] > 512) {
-            shape[4] = 512;
+        if (shape[3] > fullSize[3]) {
+            shape[3] = fullSize[3];
+        }
+
+        if (shape[4] > fullSize[4]) {
+            shape[4] = fullSize[4];
         }
 
         var metrics = new PerformanceMetrics();
